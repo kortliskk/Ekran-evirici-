@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Projeyi indir
+      - name: Kaynak kodu indir
         uses: actions/checkout@v4
 
       - name: Java 17 kur
@@ -22,26 +22,24 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Android SDK kur
-        uses: android-actions/setup-android@v3
-
-      - name: Android paketlerini yükle
+      - name: ZIP projesini çıkar
         run: |
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: ZIP içindeki projeyi çıkar
-        run: |
-          ZIP=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
-          if [ -z "$ZIP" ]; then
-            echo "Proje ZIP dosyası bulunamadı!"
+          mkdir extracted
+          unzip -o Ekran-Cevirici-Android-Projesi.zip -d extracted
+          PROJECT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          if [ -z "$PROJECT" ]; then
+            echo "Android projesi bulunamadı!"
             exit 1
           fi
-          mkdir extracted
-          unzip -o "$ZIP" -d extracted
-          cp -r extracted/. .
-          rm -rf extracted
+          cp -a "$PROJECT"/. .
 
-      - name: Gradle kur
+      - name: Android SDK kur
+        run: |
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | sort -V | tail -n 1)
+          yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -49,7 +47,7 @@ jobs:
       - name: APK oluştur
         run: gradle --no-daemon :app:assembleDebug
 
-      - name: APK dosyasını yükle
+      - name: APK yükle
         uses: actions/upload-artifact@v4
         with:
           name: EKRAN-CEVIRICI-APK
