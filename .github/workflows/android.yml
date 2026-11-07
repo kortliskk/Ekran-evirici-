@@ -1,4 +1,4 @@
-name: Ekran Cevirici Android APK
+name: ORBIT LENS Android APK Build
 
 on:
   workflow_dispatch:
@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build:
+    name: ORBIT LENS APK Oluştur
     runs-on: ubuntu-latest
 
     steps:
@@ -23,67 +24,55 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Düzeltilmiş ZIP dosyasını bul
+      - name: Proje ZIP dosyasını bul
         run: |
-          ZIP=$(find . -maxdepth 1 -type f -iname '*DUZELTILMIS*.zip' | head -n 1)
-
+          ZIP=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
           if [ -z "$ZIP" ]; then
-            echo "ZIP dosyası bulunamadı!"
+            echo "Proje ZIP dosyası bulunamadı!"
             ls -la
             exit 1
           fi
-
-          echo "ZIP bulundu: $ZIP"
           mkdir extracted
           unzip -o "$ZIP" -d extracted
 
       - name: Android projesini hazırla
         run: |
           PROJECT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
-
           if [ -z "$PROJECT" ]; then
             echo "Android projesi bulunamadı!"
             exit 1
           fi
-
-          cp -a "$PROJECT"/. .
-
-          echo "Proje dosyaları hazırlandı."
-          ls -la
+          cp -a "$PROJECT/app" .
+          cp -a "$PROJECT/build.gradle.kts" .
+          cp -a "$PROJECT/settings.gradle.kts" .
+          cp -a "$PROJECT/gradle.properties" .
 
       - name: Android SDK paketlerini kur
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | sort -V | tail -n 1)
-
           if [ -z "$SDKMANAGER" ]; then
             echo "SDK Manager bulunamadı!"
             exit 1
           fi
-
           yes | "$SDKMANAGER" --licenses || true
-
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: APK oluştur
-        run: |
-          gradle --no-daemon :app:assembleDebug
+      - name: ORBIT LENS APK oluştur
+        run: gradle --no-daemon :app:assembleDebug
 
       - name: APK kontrolü
         run: |
           test -f app/build/outputs/apk/debug/app-debug.apk
-          echo "APK başarıyla oluşturuldu!"
+          echo "ORBIT LENS APK hazır!"
 
-      - name: APK yükle
+      - name: ORBIT LENS APK yükle
         uses: actions/upload-artifact@v4
         with:
-          name: EKRAN-CEVIRICI-APK
+          name: ORBIT-LENS-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
