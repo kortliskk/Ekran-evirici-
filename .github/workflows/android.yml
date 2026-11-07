@@ -23,9 +23,28 @@ jobs:
           java-version: '17'
 
       - name: ZIP projesini çıkar
-        run: |
-          mkdir extracted
-          unzip -o Ekran-Cevirici-Android-Projesi.zip -d extracted
+     - name: ZIP projesini çıkar
+  run: |
+    mkdir extracted
+    ZIP=$(find . -maxdepth 1 -type f -iname '*DUZELTILMIS*.zip' | head -n 1)
+
+    if [ -z "$ZIP" ]; then
+      echo "Düzeltilmiş ZIP bulunamadı!"
+      ls -la
+      exit 1
+    fi
+
+    echo "Bulunan dosya: $ZIP"
+    unzip -o "$ZIP" -d extracted
+
+    PROJECT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
+    if [ -z "$PROJECT" ]; then
+      echo "Android projesi bulunamadı!"
+      exit 1
+    fi
+
+    cp -a "$PROJECT"/. .
           PROJECT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
           if [ -z "$PROJECT" ]; then
             echo "Android projesi bulunamadı!"
