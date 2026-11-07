@@ -3,7 +3,8 @@ name: Ekran Cevirici Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -22,41 +23,49 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: ZIP projesini çıkar
-     - name: ZIP projesini çıkar
-  run: |
-    mkdir extracted
-    ZIP=$(find . -maxdepth 1 -type f -iname '*DUZELTILMIS*.zip' | head -n 1)
+      - name: Düzeltilmiş ZIP dosyasını bul
+        run: |
+          ZIP=$(find . -maxdepth 1 -type f -iname '*DUZELTILMIS*.zip' | head -n 1)
 
-    if [ -z "$ZIP" ]; then
-      echo "Düzeltilmiş ZIP bulunamadı!"
-      ls -la
-      exit 1
-    fi
+          if [ -z "$ZIP" ]; then
+            echo "ZIP dosyası bulunamadı!"
+            ls -la
+            exit 1
+          fi
 
-    echo "Bulunan dosya: $ZIP"
-    unzip -o "$ZIP" -d extracted
+          echo "ZIP bulundu: $ZIP"
+          mkdir extracted
+          unzip -o "$ZIP" -d extracted
 
-    PROJECT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
-
-    if [ -z "$PROJECT" ]; then
-      echo "Android projesi bulunamadı!"
-      exit 1
-    fi
-
-    cp -a "$PROJECT"/. .
+      - name: Android projesini hazırla
+        run: |
           PROJECT=$(find extracted -name settings.gradle.kts -printf '%h\n' | head -n 1)
+
           if [ -z "$PROJECT" ]; then
             echo "Android projesi bulunamadı!"
             exit 1
           fi
+
           cp -a "$PROJECT"/. .
 
-      - name: Android SDK kur
+          echo "Proje dosyaları hazırlandı."
+          ls -la
+
+      - name: Android SDK paketlerini kur
         run: |
           SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | sort -V | tail -n 1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "SDK Manager bulunamadı!"
+            exit 1
+          fi
+
           yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
+
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Gradle 8.9 kur
         uses: gradle/actions/setup-gradle@v4
@@ -64,10 +73,17 @@ jobs:
           gradle-version: '8.9'
 
       - name: APK oluştur
-        run: gradle --no-daemon :app:assembleDebug
+        run: |
+          gradle --no-daemon :app:assembleDebug
+
+      - name: APK kontrolü
+        run: |
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          echo "APK başarıyla oluşturuldu!"
 
       - name: APK yükle
         uses: actions/upload-artifact@v4
         with:
           name: EKRAN-CEVIRICI-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
