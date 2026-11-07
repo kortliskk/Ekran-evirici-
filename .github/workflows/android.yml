@@ -1,0 +1,32 @@
+name: Ekran Cevirici Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract project ZIP
+        run: |
+          unzip -o Ekran-Cevirici-Android-Projesi.zip -d extracted
+          find extracted -type f
+
+      - name: Locate Android project
+        run: |
+          find extracted -name settings.gradle.kts -o -name settings.gradle
+
+      - name: Build APK
+        run: |
+          echo "Proje dosyaları henüz ana dizine çıkarılmadı."
+          exit 1
